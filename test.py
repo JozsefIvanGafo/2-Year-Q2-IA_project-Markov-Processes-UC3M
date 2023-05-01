@@ -1,9 +1,6 @@
-list1=[1,2,3,4,5]
-list2=[1,1,1,1,1]
-j=0
-for i in list1:
-    list2[j]=i
-    j+=1
-print(list2)
-list1.append(-1)
-print(list2)
+from decimal import Decimal
+x=Decimal("0.1")
+y=Decimal("0.2")
+result=x+y
+print(result)
+print(float(result))
