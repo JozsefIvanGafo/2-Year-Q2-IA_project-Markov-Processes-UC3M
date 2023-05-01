@@ -8,24 +8,32 @@ EXCEL_PATH="prueba.xlsx"#"ia_prob.xlsx"
 EXCEL_SHEETS="Sheet1"#"ia_prob"
 EXCEL_ON_CELLS="B2:B20"
 EXCEL_OFF_CELLS="B25:B43"
-COST_ON=10
-COST_OFF=3
-DESIRED_TEMPT=22
+EXCEL_COST_ON_CELLS="B53"
+EXCEL_COST_OFF_CELLS="B54"
+COST_ON=1
+COST_OFF=400
+#node=16+tn*12=22
+DESIRED_TEMPT=12
+COST_ON_LIST=[]
+COST_OFF_LIST=[]
+"""for j in range(19):
+    COST_ON"""
 #Activated to observe all the process to calculate the optimal policy or for debugging
-PRINT=True
-CALCULATIONS=True
-MAX_LIMIT_IT=5
+PRINT=False
+CALCULATIONS=False
+MAX_LIMIT_IT=100
 
 #Define functions
 def stochastic_domain(prob_table,tn,prev_values,cost)->float:
     #Declare variables
     length=len(prob_table)
-    accumulated_sum=cost
+    accumulated_sum=Decimal(str(cost))
     text=" %d +"%(cost)
     #We use decimal class to have more precision when using float numbers
     #The float numbers must be of type str when introduce on the decimal class to mantain the precision
     for tnplus1 in range(length):
         accumulated_sum+=Decimal(str(prob_table[tn][tnplus1]))*Decimal(prev_values[tnplus1])
+        
         if PRINT and CALCULATIONS:
             text+=" %s * %s +"%(str(prob_table[tn][tnplus1]),prev_values[tnplus1])
     if PRINT and CALCULATIONS:
@@ -36,14 +44,14 @@ def stochastic_domain(prob_table,tn,prev_values,cost)->float:
 
 def belman_eq(prob_on_table:list,prob_off_table:list,tn:int,prev_values:list,iteration)->str:
     #We do the stochastic domain equation for each action
-    on_action_value=stochastic_domain(prob_on_table,tn,prev_values,COST_ON)
+    on_action_value=stochastic_domain(prob_on_table,tn,prev_values,COST_ON_LIST[tn])
     if PRINT:
         print("--------")
-    off_action_value=stochastic_domain(prob_off_table,tn,prev_values,COST_OFF)
+    off_action_value=stochastic_domain(prob_off_table,tn,prev_values,COST_OFF_LIST[tn])
     #The we calculate the min and print it and then return the min
     result=str(min(on_action_value,off_action_value))
-    node=16+tn*0.5
     if PRINT:
+        node=16+tn*0.5
         print("V%d(node%s)= min(%s ,%s)= %s"% (iteration,str(node),on_action_value,off_action_value,result)) 
         print("------------------------------------------------")
     return result
@@ -76,12 +84,19 @@ except FileNotFoundError as my_error:
 try:
     prob_on_table=excel.range(EXCEL_ON_CELLS).expand().value
     prob_off_table=excel.range(EXCEL_OFF_CELLS).expand().value
+    COST_ON_LIST=excel.range(EXCEL_COST_ON_CELLS).expand().value
+    COST_OFF_LIST=excel.range(EXCEL_COST_OFF_CELLS).expand().value
 except Exception as my_error:
     excel.book.close()
     raise ControlTemperatureException("[ERROR] Error extracting the data from the excel file") from my_error
 #We close the excel file
 excel.book.close()
-
+COST_ON_LIST=COST_ON_LIST[0]
+print(COST_ON_LIST)
+print(COST_OFF_LIST)
+for j in range(len(COST_ON_LIST)):
+    COST_ON_LIST[j]=COST_ON_LIST[j]*COST_ON
+    COST_OFF_LIST[j]=COST_OFF_LIST[j]*COST_OFF
 
 #We print the table of probabilities
 if PRINT:
@@ -103,6 +118,7 @@ for i in range(length):
     #We use strings because we can decise with wich precision our program work e.g value[0][:7]!=value[0][:9]
     before_value.append("-1")
     value.append("0")
+  
 #We start to do the iterations
 while str(value)!=str(before_value) and iteration<=MAX_LIMIT_IT:
     if PRINT:
@@ -116,19 +132,17 @@ while str(value)!=str(before_value) and iteration<=MAX_LIMIT_IT:
     for i in  range(length):
         before_value[i]=value[i][:prec]
     #We use the belman equation for each node
-    for node in range(length):
-        value[node]=belman_eq(prob_on_table=prob_on_table,
+    for tn in range(length):
+        value[tn]=belman_eq(prob_on_table=prob_on_table,
                     prob_off_table=prob_off_table,
-                    tn=node,
+                    tn=tn,
                     prev_values=before_value,
                     iteration=iteration)[:prec]
     #We go the the next iteration
     iteration+=1
 #Print final values
-if PRINT:
-    print("#######################################################################")
-    print("Iteration: ", iteration)
-    print("value %s"%str(value))
-    print("before_values %s"%(before_value))
-    print("")
-
+print("#######################################################################")
+print("Iteration: ", iteration)
+print("value %s"%str(value))
+print("before_values %s"%(before_value))
+print("")
