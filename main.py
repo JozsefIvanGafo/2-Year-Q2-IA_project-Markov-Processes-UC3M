@@ -10,18 +10,17 @@ EXCEL_ON_CELLS="B2:B20"
 EXCEL_OFF_CELLS="B25:B43"
 EXCEL_COST_ON_CELLS="B53"
 EXCEL_COST_OFF_CELLS="B54"
-COST_ON=1
-COST_OFF=400
+COST_ON=float(input("The value for Cost ON is:"))
+COST_OFF=float(input("The value for Cost OFF is:"))
 #node=16+tn*12=22
 DESIRED_TEMPT=12
-COST_ON_LIST=[]
-COST_OFF_LIST=[]
-"""for j in range(19):
-    COST_ON"""
+
 #Activated to observe all the process to calculate the optimal policy or for debugging
+#Prints
 PRINT=False
 CALCULATIONS=False
-MAX_LIMIT_IT=100
+#max number of iterations
+MAX_LIMIT_IT=3
 
 #Define functions
 def stochastic_domain(prob_table,tn,prev_values,cost)->float:
@@ -42,12 +41,12 @@ def stochastic_domain(prob_table,tn,prev_values,cost)->float:
     #We return the accumulative sum without adding the cost
     return float(accumulated_sum)
 
-def belman_eq(prob_on_table:list,prob_off_table:list,tn:int,prev_values:list,iteration)->str:
+def belman_eq(prob_on_table:list,prob_off_table:list,tn:int,prev_values:list,iteration:int)->str:
     #We do the stochastic domain equation for each action
-    on_action_value=stochastic_domain(prob_on_table,tn,prev_values,COST_ON_LIST[tn])
+    on_action_value=stochastic_domain(prob_on_table,tn,prev_values,COST_ON)
     if PRINT:
         print("--------")
-    off_action_value=stochastic_domain(prob_off_table,tn,prev_values,COST_OFF_LIST[tn])
+    off_action_value=stochastic_domain(prob_off_table,tn,prev_values,COST_OFF)
     #The we calculate the min and print it and then return the min
     result=str(min(on_action_value,off_action_value))
     if PRINT:
@@ -56,8 +55,30 @@ def belman_eq(prob_on_table:list,prob_off_table:list,tn:int,prev_values:list,ite
         print("------------------------------------------------")
     return result
 
-def optimal_policy():
-    pass
+def optimal_policy(value_list,tn,prob_on_table,prob_off_table):
+    on_action_value=stochastic_domain(prob_on_table,tn,value_list,COST_ON)
+    off_action_value=stochastic_domain(prob_off_table,tn,value_list,COST_OFF)
+    node=16+tn*0.5
+    #Conditionals to select the optimal policy for the node tn
+    #If the optimal policy for the node tn is the off action
+
+    #If the optimal policy for the node tn is the on and off action
+    if on_action_value==off_action_value:
+        result="node %s: on and off"%(str(node))
+        text="The optimal policy for node %s is: on and off"%(str(node))
+    if on_action_value>off_action_value:
+        result="node %s: off"%(str(node))
+        text="The optimal policy for node %s is: off"%(str(node))
+    #If the optimal policy for the node tn is the on action
+    elif on_action_value<off_action_value:
+        result = "node %s: on"%(str(node))
+        text="The optimal policy for node %s is: on"%(str(node))
+    
+        
+    if PRINT:
+        print(text)
+    #We return the result
+    return result
 
 def print_table(table:list)->None:
     """Function that prints the tables of probabilities"""
@@ -91,12 +112,6 @@ except Exception as my_error:
     raise ControlTemperatureException("[ERROR] Error extracting the data from the excel file") from my_error
 #We close the excel file
 excel.book.close()
-COST_ON_LIST=COST_ON_LIST[0]
-print(COST_ON_LIST)
-print(COST_OFF_LIST)
-for j in range(len(COST_ON_LIST)):
-    COST_ON_LIST[j]=COST_ON_LIST[j]*COST_ON
-    COST_OFF_LIST[j]=COST_OFF_LIST[j]*COST_OFF
 
 #We print the table of probabilities
 if PRINT:
@@ -133,7 +148,8 @@ while str(value)!=str(before_value) and iteration<=MAX_LIMIT_IT:
         before_value[i]=value[i][:prec]
     #We use the belman equation for each node
     for tn in range(length):
-        value[tn]=belman_eq(prob_on_table=prob_on_table,
+        if tn !=DESIRED_TEMPT:
+            value[tn]=belman_eq(prob_on_table=prob_on_table,
                     prob_off_table=prob_off_table,
                     tn=tn,
                     prev_values=before_value,
@@ -141,8 +157,19 @@ while str(value)!=str(before_value) and iteration<=MAX_LIMIT_IT:
     #We go the the next iteration
     iteration+=1
 #Print final values
-print("#######################################################################")
-print("Iteration: ", iteration)
-print("value %s"%str(value))
-print("before_values %s"%(before_value))
-print("")
+if PRINT:
+    print("#######################################################################")
+    print("Finished calculating the values for each node")
+    print("Iteration: ", iteration-1)
+    print("value %s"%str(value))
+    print("before_values %s"%(before_value))
+    print("")
+if iteration>MAX_LIMIT_IT:
+    raise ControlTemperatureException("[ERROR] Max number of iteration has been exceed it")
+#Now we do the optimal policy for each node
+policy = []
+for tn in range(length):    
+    policy.append(optimal_policy(value,tn,prob_on_table,prob_off_table))
+#finally we print the final result
+print("Cost On= %s and Cost off= %s"%(str(COST_ON),str(COST_OFF)))
+print("The optimal policy for each node is: ",policy)

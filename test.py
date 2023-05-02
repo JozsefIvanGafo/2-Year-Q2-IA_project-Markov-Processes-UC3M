@@ -1,2 +1,1 @@
-for j in range(19):
-    
+print("1.23456"[:4])
