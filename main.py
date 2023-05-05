@@ -8,22 +8,23 @@ EXCEL_PATH="prueba.xlsx"#"ia_prob.xlsx"
 EXCEL_SHEETS="Sheet1"#"ia_prob"
 EXCEL_ON_CELLS="B2:B20"
 EXCEL_OFF_CELLS="B25:B43"
-EXCEL_COST_ON_CELLS="B53"
-EXCEL_COST_OFF_CELLS="B54"
-COST_ON=float(input("The value for Cost ON is:"))
-COST_OFF=float(input("The value for Cost OFF is:"))
+try:
+    COST_ON=float(input("The value for Cost ON is:"))
+    COST_OFF=float(input("The value for Cost OFF is:"))
+except ValueError as my_error:
+    raise ControlTemperatureException("[ERROR]: Wrong input value on  costs") from my_error
 #node=16+tn*12=22
 DESIRED_TEMPT=12
 
 #Activated to observe all the process to calculate the optimal policy or for debugging
 #Prints
-PRINT=False
+PRINT=True
 CALCULATIONS=False
 #max number of iterations
-MAX_LIMIT_IT=3
+MAX_LIMIT_IT=1000
 
 #Define functions
-def stochastic_domain(prob_table,tn,prev_values,cost)->float:
+def stochastic_domain(prob_table:list,tn:int,prev_values:list,cost:float)->float:
     #Declare variables
     length=len(prob_table)
     accumulated_sum=Decimal(str(cost))
@@ -55,7 +56,7 @@ def belman_eq(prob_on_table:list,prob_off_table:list,tn:int,prev_values:list,ite
         print("------------------------------------------------")
     return result
 
-def optimal_policy(value_list,tn,prob_on_table,prob_off_table):
+def optimal_policy(value_list:list,tn:int,prob_on_table:list,prob_off_table:list)->str:
     on_action_value=stochastic_domain(prob_on_table,tn,value_list,COST_ON)
     off_action_value=stochastic_domain(prob_off_table,tn,value_list,COST_OFF)
     node=16+tn*0.5
@@ -80,19 +81,7 @@ def optimal_policy(value_list,tn,prob_on_table,prob_off_table):
     #We return the result
     return result
 
-def print_table(table:list)->None:
-    """Function that prints the tables of probabilities"""
-    length=len(table)
-    node=16
-    text="Tn+1/Tn "
-    for i in range(length):
-        text+=" "+ str(node)
-        node+=0.5
-    print(text)
-    node=16
-    for i in range(length):
-        print(node," ",table[i])
-        node+=0.5
+
 
 
 #Here we execute the main function
@@ -105,8 +94,6 @@ except FileNotFoundError as my_error:
 try:
     prob_on_table=excel.range(EXCEL_ON_CELLS).expand().value
     prob_off_table=excel.range(EXCEL_OFF_CELLS).expand().value
-    COST_ON_LIST=excel.range(EXCEL_COST_ON_CELLS).expand().value
-    COST_OFF_LIST=excel.range(EXCEL_COST_OFF_CELLS).expand().value
 except Exception as my_error:
     excel.book.close()
     raise ControlTemperatureException("[ERROR] Error extracting the data from the excel file") from my_error
@@ -125,7 +112,7 @@ if PRINT:
 #we define variables for the iterations and bellman eq.
 before_value=[]
 value=[]
-iteration=1
+iteration=0
 #formula for the precision for our operations
 prec=max(len(str(COST_OFF)),len(str(COST_ON)))+7
 length=len(prob_on_table)
